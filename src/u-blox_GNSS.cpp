@@ -50,6 +50,8 @@
 
 #include <Arduino.h>
 #include "u-blox_GNSS.h"
+#include <FreeRTOS.h>
+#include <task.h>
 
 DevUBLOXGNSS::DevUBLOXGNSS(void)
 {
@@ -1152,7 +1154,6 @@ bool DevUBLOXGNSS::checkUbloxInternal(ubxPacket *incomingUBX, uint8_t requestedC
 // Returns true if new bytes are available
 bool DevUBLOXGNSS::checkUbloxI2C(ubxPacket *incomingUBX, uint8_t requestedClass, uint8_t requestedID)
 {
-  if (millis() - lastCheck >= i2cPollingWait)
   {
     // Get the number of bytes available from the module
     // From the u-blox integration manual:
@@ -1172,7 +1173,6 @@ bool DevUBLOXGNSS::checkUbloxI2C(ubxPacket *incomingUBX, uint8_t requestedClass,
       //         _debugSerial.println(F("checkUbloxI2C: OK, zero bytes available"));
       //       }
       // #endif
-      lastCheck = millis(); // Put off checking to avoid I2C bus traffic
       return (false);
     }
 
@@ -5690,8 +5690,7 @@ sfe_ublox_status_e DevUBLOXGNSS::waitForNoACKResponse(ubxPacket *outgoingUBX, ui
         return (SFE_UBLOX_STATUS_CRC_FAIL); // We received invalid data
       }
     }
-
-    delay(1); // Allow an RTOS to get an elbow in (#11)
+    vTaskDelay(pdMS_TO_TICKS(i2cPollingWait));
   }
 
 #ifndef SFE_UBLOX_REDUCED_PROG_MEM
